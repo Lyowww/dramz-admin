@@ -37,14 +37,24 @@ export default function SeriesListPage() {
   }, [])
 
   const toggleVisibility = async (sid: string) => {
-    await apiPut(`/admin/series/${sid}/toggle-visibility`)
-    load()
+    try {
+      setError(null)
+      await apiPut(`/admin/series/${sid}/toggle-visibility`)
+      load()
+    } catch (e: any) {
+      setError(e?.message || "Не удалось обновить видимость")
+    }
   }
 
   const remove = async (sid: string) => {
     if (!confirm("Удалить сериал?")) return
-    await apiDelete(`/admin/series/${sid}`)
-    load()
+    try {
+      setError(null)
+      await apiDelete(`/admin/series/${sid}`)
+      load()
+    } catch (e: any) {
+      setError(e?.message || "Не удалось удалить сериал")
+    }
   }
 
   return (

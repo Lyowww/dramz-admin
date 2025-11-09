@@ -9,6 +9,17 @@ type RequestOptions = {
   isMultipart?: boolean
 }
 
+export class RequestError extends Error {
+  status: number
+  data: any
+  constructor(message: string, status: number, data?: any) {
+    super(message)
+    this.name = 'RequestError'
+    this.status = status
+    this.data = data
+  }
+}
+
 type AuthState = {
   accessToken: string | null
   admin: { id: string; username: string } | null
@@ -61,10 +72,18 @@ const request = async <T>(method: HttpMethod, path: string, options: RequestOpti
     body: options.isMultipart ? options.body : options.body ? JSON.stringify(options.body) : undefined
   })
   const text = await res.text()
-  const data = text ? JSON.parse(text) : null
+  let data: any = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
   if (!res.ok) {
-    const err = new Error((data && data.message) || 'Request failed')
-    throw err
+    const message =
+      (data && typeof data === 'object' && (data.message || data.error || data.errorMessage)) ||
+      (typeof data === 'string' && data) ||
+      'Request failed'
+    throw new RequestError(message, res.status, data)
   }
   return data as T
 }
@@ -92,10 +111,18 @@ export const apiUpload = async <T>(path: string, formData: FormData, method: 'PO
     body: formData
   })
   const text = await res.text()
-  const data = text ? JSON.parse(text) : null
+  let data: any = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
   if (!res.ok) {
-    const err = new Error((data && data.message) || 'Upload failed')
-    throw err
+    const message =
+      (data && typeof data === 'object' && (data.message || data.error || data.errorMessage)) ||
+      (typeof data === 'string' && data) ||
+      'Upload failed'
+    throw new RequestError(message, res.status, data)
   }
   return data as T
 }

@@ -17,6 +17,14 @@ type Series = {
 
 type ProgressItem = { audio: string; subtitle: string }
 type ProgressData = { uploaded: ProgressItem[]; remaining: ProgressItem[]; isComplete: boolean }
+type UploadResponse = {
+  success: boolean
+  message: string
+  seriesId: string
+  episodeNumber: number
+  uploaded: ProgressItem
+  nextStep?: { message: string; audio: string; subtitle: string }
+}
 
 const ORDER: ProgressItem[] = [
   { audio: "russian", subtitle: "none" },
@@ -62,6 +70,7 @@ export default function EpisodesManagerPage() {
   const [working, setWorking] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [resetKey, setResetKey] = useState(0)
+  const [serverNext, setServerNext] = useState<{ message: string; audio: string; subtitle: string } | null>(null)
 
   const id = params.id
 
@@ -89,8 +98,19 @@ export default function EpisodesManagerPage() {
   }
 
   const loadProgress = async (ep: number) => {
-    const data = await apiGet<ProgressData>(`/admin/series/${id}/episodes/${ep}/progress`)
-    setProgress(data)
+    setMsg(null)
+    try {
+      const data = await apiGet<ProgressData>(`/admin/series/${id}/episodes/${ep}/progress`)
+      setProgress(data)
+    } catch (e: any) {
+      if (e?.status === 404) {
+        setProgress(null)
+        setMsg("Серия не найдена")
+      } else {
+        setProgress(null)
+        setMsg(e?.message || "Ошибка загрузки прогресса")
+      }
+    }
   }
 
   useEffect(() => {
@@ -107,7 +127,10 @@ export default function EpisodesManagerPage() {
       await loadProgress(Number(newEpisode))
       setNewEpisode("")
     } catch (e: any) {
-      setMsg(e.message || "Не удалось создать серию")
+      const message =
+        e?.message ||
+        (e?.status === 409 ? "Серия с таким номером уже существует" : e?.status === 500 ? "Внутренняя ошибка сервера" : "Не удалось создать серию")
+      setMsg(message)
     } finally {
       setWorking(false)
     }
@@ -134,9 +157,27 @@ export default function EpisodesManagerPage() {
       fd.append("audioLanguage", nextRequired.audio)
       fd.append("subtitleLanguage", nextRequired.subtitle)
       fd.append("video", file)
-      const res = await apiUpload<{ message?: string }>(`/admin/series/${id}/episodes/upload`, fd)
+      const res = await apiUpload<UploadResponse>(`/admin/series/${id}/episodes/upload`, fd)
       setMsg(res?.message || "Загружено")
-      await loadProgress(Number(episodeNumber))
+      setServerNext(res.nextStep || null)
+      if (progress) {
+        const key = (p: ProgressItem) => `${p.audio}|${p.subtitle}`
+        const existing = new Set(progress.uploaded.map(key))
+        if (!existing.has(key(res.uploaded))) {
+          const uploaded = [...progress.uploaded, res.uploaded]
+          const remaining = ORDER.filter(p => !uploaded.some(u => u.audio === p.audio && u.subtitle === p.subtitle))
+          const isComplete = remaining.length === 0 || !res.nextStep
+          setProgress({ uploaded, remaining, isComplete })
+        } else {
+          setProgress({
+            uploaded: progress.uploaded,
+            remaining: ORDER.filter(p => !progress.uploaded.some(u => u.audio === p.audio && u.subtitle === p.subtitle)),
+            isComplete: ORDER.every(p => progress.uploaded.some(u => u.audio === p.audio && u.subtitle === p.subtitle)) && !res.nextStep
+          })
+        }
+      } else {
+        await loadProgress(Number(episodeNumber))
+      }
       setResetKey(k => k + 1)
     } catch (e: any) {
       setMsg(e.message || "Ошибка загрузки")
@@ -175,6 +216,7 @@ export default function EpisodesManagerPage() {
                 </div>
                 <Button size="sm" disabled={working}>{working ? "Сохранение..." : "Создать серию"}</Button>
               </form>
+              {msg && <p className="mt-2 text-sm text-error-500">{msg}</p>}
             </div>
 
             <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800">
@@ -186,6 +228,7 @@ export default function EpisodesManagerPage() {
                 </div>
                 <Button size="sm">Открыть</Button>
               </form>
+              {msg && <p className="mt-2 text-sm text-error-500">{msg}</p>}
             </div>
           </div>
 
@@ -226,6 +269,11 @@ export default function EpisodesManagerPage() {
                         <div className="mb-3 text-sm">
                           Следующая комбинация: <span className="font-medium">{nextRequired ? label(nextRequired) : "-"}</span>
                         </div>
+                        {serverNext && (
+                          <div className="mb-3 text-sm text-gray-600 dark:text-white/80">
+                            Подсказка: {serverNext.message}
+                          </div>
+                        )}
                         <DnDFile
                           onFile={onDropVideo}
                           accept={{ "video/*": [] }}

@@ -25,6 +25,7 @@ export default function SeriesDetailPage() {
   const [item, setItem] = useState<Series | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [msg, setMsg] = useState<string | null>(null)
   const [newEpisode, setNewEpisode] = useState<number | "">("")
   const [uploadEpisode, setUploadEpisode] = useState<number | "">("")
   const [audio, setAudio] = useState("russian")
@@ -55,14 +56,24 @@ export default function SeriesDetailPage() {
   }, [id])
 
   const toggleVisibility = async () => {
-    await apiPut(`/admin/series/${id}/toggle-visibility`)
-    load()
+    try {
+      setMsg(null)
+      await apiPut(`/admin/series/${id}/toggle-visibility`)
+      load()
+    } catch (e: any) {
+      setMsg(e?.message || "Не удалось обновить видимость")
+    }
   }
 
   const remove = async () => {
     if (!confirm("Удалить сериал?")) return
-    await apiDelete(`/admin/series/${id}`)
-    router.replace("/series")
+    try {
+      setMsg(null)
+      await apiDelete(`/admin/series/${id}`)
+      router.replace("/series")
+    } catch (e: any) {
+      setMsg(e?.message || "Не удалось удалить сериал")
+    }
   }
 
   const createEpisode = async (e: React.FormEvent) => {
@@ -73,6 +84,11 @@ export default function SeriesDetailPage() {
       await apiPost(`/admin/series/${id}/episodes`, { episodeNumber: Number(newEpisode) })
       setNewEpisode("")
       load()
+    } catch (e: any) {
+      const message =
+        e?.message ||
+        (e?.status === 409 ? "Серия с таким номером уже существует" : e?.status === 500 ? "Внутренняя ошибка сервера" : "Не удалось создать серию")
+      setMsg(message)
     } finally {
       setWorking(false)
     }
@@ -132,6 +148,7 @@ export default function SeriesDetailPage() {
                 <Button size="sm" variant="outline" onClick={toggleVisibility}>Переключить видимость</Button>
                 <Button size="sm" variant="outline" onClick={remove}>Удалить</Button>
               </div>
+              {msg && <p className="text-error-500 text-sm pt-1">{msg}</p>}
             </div>
           </div>
 
