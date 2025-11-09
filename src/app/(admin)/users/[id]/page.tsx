@@ -67,7 +67,7 @@ export default function UserDetailPage() {
       await apiPost(`/admin/users/${id}/balance`, {
         amount: Number(amount),
         description,
-        adminId: auth.admin?.id || ""
+        // userId: auth.admin?.id || ""
       })
       setTxMsg("Баланс обновлен")
       setAmount("")

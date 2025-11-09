@@ -42,7 +42,7 @@ export default function UsersSearchPage() {
       setLoading(false)
     }
   }
-
+  console.log(result)
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Поиск пользователя</h2>
@@ -75,7 +75,7 @@ export default function UsersSearchPage() {
                 Last Activity: {new Date(result.user.lastActivityAt).toLocaleString()}
               </div>
             </div>
-            <Link href={`/users/${result.user.telegramId}`}>
+            <Link href={`/users/${result.user._id}`}>
               <Button size="sm">Открыть</Button>
             </Link>
           </div>
