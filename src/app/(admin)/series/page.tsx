@@ -11,7 +11,7 @@ type Series = {
   description: string
   price: number
   isVisible?: boolean
-  coverUrl?: string
+  coverImage?: string
 }
 
 export default function SeriesListPage() {
@@ -76,8 +76,8 @@ export default function SeriesListPage() {
                 return (
                   <tr key={id} className="border-b border-gray-100 dark:border-gray-800">
                     <td className="py-3 pr-4">
-                      {s.coverUrl ? (
-                        <img src={s.coverUrl} alt={s.title} className="w-16 h-10 object-cover rounded" />
+                      {s.coverImage ? (
+                        <img src={`https://api.dramz.fun/` + s.coverImage} alt={s.title} className="w-16 h-10 object-cover rounded" />
                       ) : (
                         <div className="w-16 h-10 bg-gray-100 dark:bg-[#0D0920] rounded" />
                       )}
