@@ -8,6 +8,7 @@ import {
   BoxCubeIcon,
   ChevronDownIcon,
   HorizontaLDots,
+  DollarLineIcon,
   PageIcon,
   PieChartIcon,
   PlugInIcon,
@@ -46,6 +47,11 @@ const navItems: NavItem[] = [
     icon: <PlugInIcon />,
     name: "Admins",
     path: "/admins",
+  },
+  {
+    icon: <DollarLineIcon />,
+    name: "Exchange Rate",
+    path: "/exchange-rate",
   },
   // {
   //   icon: <CalenderIcon />,
